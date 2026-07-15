@@ -220,6 +220,9 @@
   #tourcap .tc-sub{font-size:12.5px;letter-spacing:.08em;color:#cfeeff;margin-top:7px}
   @keyframes tourcapin{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
   #btn-tour.on{background:rgba(255,120,200,.18);border-color:rgba(255,120,200,.5);color:#ffd6ef}
+  #btn-exit{display:none;border-color:rgba(255,90,110,.45);color:#ff9aa6}
+  #btn-exit:hover{background:rgba(255,60,80,.22);color:#fff;border-color:rgba(255,90,110,.7)}
+  #app.touring #btn-exit{display:inline-flex}
   /* real ⟷ fantasy mode */
   #btn-mode{border-color:rgba(200,160,255,.42);color:#e6d5ff}
   #app.real-mode #btn-mode{border-color:rgba(0,255,136,.5);color:#c8ffe0;background:rgba(0,255,136,.1)}
@@ -301,6 +304,7 @@
     <button id="btn-min" title="hide side panels">⊟ panels</button>
     <span class="spacer"></span>
     <button id="btn-tour" title="auto-play a showcase of every feature">🎬 tour</button>
+    <button id="btn-exit" title="stop the tour">✕ exit</button>
   </header>
   <div id="stage">
     <canvas id="bg"></canvas>
@@ -2174,13 +2178,13 @@ function drawFire(c,t){c.save();const g=c.createLinearGradient(0,H,0,H*0.26);g.a
   c.restore();}
 const TERM_THEMES=['nyan','parrot','doge','fire'];
 const DOGE_WORDS=['wow','such crash','very void','so terminate','many bugs','much entropy','no more galaxy','stack overflow'];
-const TERM_MSG={nyan:'SIMULATION TERMINATED<small>▶ PRESS RESET TO REFORM THE GALAXY</small>',parrot:'party.exe HAS STOPPED RESPONDING<small>▶ PRESS RESET TO REFORM THE GALAXY</small>',doge:'such terminate. very void. many bug.<small>▶ PRESS RESET. wow.</small>',fire:'this is fine.<small>▶ HAVE YOU TRIED TURNING IT OFF AND ON AGAIN?</small>'};
-const TERM_FLAVOR={nyan:'a rainbow cat eats the cosmos.',parrot:'the party parrots take everything.',doge:'much crash. very void. wow.',fire:'this is fine.'};
+const TERM_MSG={nyan:'SIMULATION TERMINATED<small>▶ PRESS RESET TO REFORM THE GALAXY</small>',parrot:'party.exe HAS STOPPED RESPONDING<small>▶ PRESS RESET TO REFORM THE GALAXY</small>',doge:'such terminate. very void. many bug.<small>▶ PRESS RESET. wow.</small>',fire:'this is fine.<small>▶ HAVE YOU TRIED TURNING IT OFF AND ON AGAIN?</small>',mix:'THE UNIVERSE HAS ENDED<small>▶ PRESS RESET TO REFORM THE GALAXY</small>'};
+const TERM_FLAVOR={nyan:'a rainbow cat eats the cosmos.',parrot:'the party parrots take everything.',doge:'much crash. very void. wow.',fire:'this is fine.',mix:'the cats & party parrots devour the cosmos.'};
 function startTermination(forceTheme){if(TERM)return;
   document.getElementById('app').classList.add('terminating');layout(); // collapse panels → full-width stage
   const tc=document.getElementById('term');tc.width=W*DPR;tc.height=H*DPR;tc.style.display='block';
   const theme=forceTheme||pick(TERM_THEMES); // tour forces 'nyan'; free play is random
-  const cats=[];for(let i=0;i<84;i++)cats.push({a:Math.random()*6.283,sp:150+Math.random()*320,size:0.9+Math.random()*1.9,delay:Math.random()*0.7,id:i}); // more, bigger, near-instant
+  const cats=[];for(let i=0;i<84;i++)cats.push({a:Math.random()*6.283,sp:150+Math.random()*320,size:0.9+Math.random()*1.9,delay:Math.random()*0.7,id:i,kind:theme==='mix'?(i%2?'parrot':'nyan'):theme}); // 'mix' = cats AND party parrots
   const words=theme==='doge'?Array.from({length:11},()=>({x:Math.random()*W,y:Math.random()*H,txt:pick(DOGE_WORDS),col:pick(['#4a7fff','#ff5a5a','#3fbf3f','#ffcf3f','#ff7ad9']),vx:(Math.random()-0.5)*40,vy:(Math.random()-0.5)*40,delay:Math.random()*1.4,size:0.9+Math.random()*1.0})):[];
   const fires=theme==='fire'?Array.from({length:30},()=>({x:Math.random()*W,y:H*0.22+Math.random()*H*0.78,scale:0.9+Math.random()*1.9,phase:Math.random()*16,fps:8+Math.random()*8,a:0.72+Math.random()*0.28})):[];
   STARS.forEach(s=>{const a=Math.random()*6.283,r=220+Math.random()*950;s._rdx=Math.cos(a)*r;s._rdy=Math.sin(a)*r;});
@@ -2210,9 +2214,8 @@ function termTick(rdt,t){const tc=document.getElementById('term');const tw=Math.
     for(let i=0;i<8;i++){const yy=Math.random()*H,hh=2+Math.random()*12;c.fillStyle=`rgba(${ri(0,255)},${ri(0,255)},${ri(0,255)},.13)`;c.fillRect(0,yy,W,hh);} // glitch static
     const th=TERM.theme;
     if(th==='fire'){drawFire(c,t);c.save();c.textAlign='center';c.fillStyle='rgba(255,255,255,.95)';c.font='700 30px ui-monospace,monospace';c.fillText('this is fine.',W/2,H*0.2);c.restore();}
-    else{const drawer=th==='parrot'?drawParrot:th==='doge'?drawDoge:drawNyan;
-      for(const k of TERM.cats){if(TERM.t<k.delay)continue;const d=(TERM.t-k.delay)*k.sp;let x=CX+Math.cos(k.a)*d,y=CY+Math.sin(k.a)*d;
-        x=((x%W)+W)%W;y=((y%H)+H)%H;drawer(c,x,y,k.a,k.size,t,k.id);} // critters explode out from the galaxy's centre in all directions, wrapping
+    else{for(const k of TERM.cats){if(TERM.t<k.delay)continue;const d=(TERM.t-k.delay)*k.sp;let x=CX+Math.cos(k.a)*d,y=CY+Math.sin(k.a)*d;
+        x=((x%W)+W)%W;y=((y%H)+H)%H;const drawer=k.kind==='parrot'?drawParrot:k.kind==='doge'?drawDoge:drawNyan;drawer(c,x,y,k.a,k.size,t,k.id);} // each critter drawn by its own kind — 'mix' gives cats AND parrots
       if(th==='doge'){c.save();c.textAlign='center';c.font='italic 700 22px "Comic Sans MS","Comic Sans",cursive';
         for(const w of TERM.words){if(TERM.t<w.delay)continue;const tt=TERM.t-w.delay,wx=((w.x+w.vx*tt)%W+W)%W,wy=((w.y+w.vy*tt)%H+H)%H;c.fillStyle=w.col;c.fillText(w.txt,wx,wy);}c.restore();}}
     if(TERM.flash>0){c.fillStyle=`rgba(255,255,255,${TERM.flash})`;c.fillRect(0,0,W,H);TERM.flash=Math.max(0,TERM.flash-rdt*2.4);} // opening white blast reveals the storm
@@ -2302,39 +2305,55 @@ const fOff=id=>{const b=document.getElementById(id);if(b.classList.contains('on'
 const TOUR_SCRIPT=[
  {t:0.3,cap:'PRALAYA',sub:'a living galaxy of stars & civilizations',act:()=>{enterGalaxy();gScale=1.85;gx=solStar.x;gy=solStar.y;tourCam(0.9);}},
  {t:3.5,cap:'3,385 real stars',sub:'the solar neighbourhood — real positions, distances & spectra',act:()=>tourCam(1.05)},
- {t:6.5,cap:'18 real exoplanet systems',sub:'from the NASA Exoplanet Archive — the green-ringed hosts',act:()=>tourCam(0.95)},
- {t:9.3,cap:'⚔ Galactic war',sub:'conflicts erupt across the neighbouring systems',act:()=>{inciteWar();inciteWar();inciteWar();inciteWar();tourCam(1.25);}},
- {t:12.0,cap:'…and it spreads',sub:'whole regions of the galaxy in flames',act:()=>{inciteWar();inciteWar();inciteWar();}},
- {t:14.8,cap:'📊 A real BI dashboard',sub:'KPIs · discovery timeline · 3-D spectral bars · Sankey flows',act:dOpen},
- {t:18.8,cap:'🔬 Real  ⟷  🌌 Fantasy',sub:'verified NASA data, or the agentic imagination — your call',act:()=>{dClose();setMode(true);}},
- {t:22.0,cap:'…back to the living galaxy',sub:'the civilizations return',act:()=>setMode(false)},
- {t:24.5,cap:'So many worlds to explore',sub:'dive into any real system…',act:()=>{dClose();enterSystem('TRAPPIST-1');hideSysCardNow();}},
- {t:27.5,cap:'TRAPPIST-1',sub:'seven Earth-sized worlds around a red dwarf'},
- {t:29.5,cap:'Proxima Centauri',sub:'our nearest neighbour — 4.2 light-years away',act:()=>{enterSystem('Proxima Cen');hideSysCardNow();}},
- {t:32.0,cap:'55 Cancri',sub:'home to a lava “diamond” super-Earth',act:()=>{enterSystem('55 Cnc');hideSysCardNow();}},
- {t:34.5,cap:'…and home: the Sol system',sub:'real orbits & worlds, rendered live in WebGL',act:()=>{enterSystem('Sol');hideSysCardNow();}},
- {t:37.0,cap:'🕸 Gravity',sub:'spacetime curves around the Sun',act:()=>fOn('btn-grav')},
- {t:39.5,cap:'🧲 Electromagnetism',sub:'solar wind & planetary magnetospheres',act:()=>fOn('btn-em')},
- {t:42.0,cap:'Eight worlds, one star',sub:'each rendered from its real radius & temperature',act:()=>{fOff('btn-grav');fOff('btn-em');unfocus();}},
- {t:44.5,cap:'Jupiter',sub:'a banded gas giant — a live Deep-Fold shader',act:()=>{const p=planets.find(x=>x.name==='Jupiter');if(p)focusOn(p);}},
- {t:46.5,cap:'Saturn',sub:'real dithered rings, rendered in WebGL',act:()=>{const p=planets.find(x=>x.name==='Saturn');if(p)focusOn(p);}},
- {t:48.5,cap:'Sol',sub:'our star — fusing hydrogen for 4.6 billion years',act:()=>focusOn(SUN)},
- {t:50.5,cap:'Earth',sub:'the only world known to harbour life',act:()=>{const e=planets.find(x=>x.name==='Earth');if(e)focusOn(e);}},
- {t:52.8,cap:'Every world is an AI agent',sub:'goals · trust · memory — perceive, decide, act'},
- {t:55.0,cap:'Read its mind',sub:'it forms a goal and acts on it — or a live Claude does'},
- {t:57.5,cap:'The Council',sub:'minds · trust matrix · diplomacy web · balance of power',act:dOpen},
- {t:61.5,cap:'Back to the stars',sub:'',act:()=>{dClose();enterGalaxy();gScale=1.0;tourCam(1.0);}},
- {t:63.0,cap:'☠ Terminate the universe',sub:'3… 2… 1… and all hell breaks loose',act:()=>startTermination('nyan')},
- {t:72.0,cap:'…and the galaxy reforms',sub:'the cycle begins again',act:()=>{if(TERM)startReform();}},
- {t:75.5,cap:'PRALAYA',sub:'a single self-contained HTML file · created by Saagar Shekara Devadiga'},
- {t:79.5,end:true,finale:true}
+ {t:6.3,cap:'18 real exoplanet systems',sub:'from the NASA Exoplanet Archive — the green-ringed hosts',act:()=>tourCam(0.95)},
+ {t:9.0,cap:'🌡 Thermal vision',sub:'every star recoloured by its real surface temperature',act:()=>{if(vision!==1)document.getElementById('btn-vision').click();}},
+ {t:11.2,cap:'📡 Microwave',sub:'the 2.7 K cosmic microwave background — the Big Bang’s afterglow',act:()=>document.getElementById('btn-vision').click()},
+ {t:13.4,cap:'👁 See the cosmos any way you like',sub:'optical · thermal · microwave — switch layers any time',act:()=>document.getElementById('btn-vision').click()},
+ {t:15.8,cap:'⚔ Galactic war',sub:'conflicts erupt across the neighbouring systems',act:()=>{inciteWar();inciteWar();inciteWar();inciteWar();}},
+ {t:18.0,cap:'…and it spreads',sub:'whole regions of the galaxy in flames',act:()=>{inciteWar();inciteWar();inciteWar();}},
+ {t:20.3,cap:'📊 A real BI dashboard',sub:'KPIs · discovery timeline · 3-D spectral bars · Sankey flows',act:dOpen},
+ {t:24.0,cap:'🔬 Real  ⟷  🌌 Fantasy',sub:'verified NASA data, or the agentic imagination — your call',act:()=>{dClose();setMode(true);}},
+ {t:27.0,cap:'…back to the living galaxy',sub:'the civilizations return',act:()=>setMode(false)},
+ {t:29.3,cap:'So many worlds to explore',sub:'dive into any real system…',act:()=>{dClose();enterSystem('TRAPPIST-1');hideSysCardNow();}},
+ {t:31.8,cap:'TRAPPIST-1',sub:'seven Earth-sized worlds around a red dwarf'},
+ {t:33.8,cap:'Proxima Centauri',sub:'our nearest neighbour — 4.2 light-years away',act:()=>{enterSystem('Proxima Cen');hideSysCardNow();}},
+ {t:35.8,cap:'55 Cancri',sub:'home to a lava “diamond” super-Earth',act:()=>{enterSystem('55 Cnc');hideSysCardNow();}},
+ {t:37.8,cap:'…and home: the Sol system',sub:'real orbits & worlds, rendered live in WebGL',act:()=>{enterSystem('Sol');hideSysCardNow();}},
+ {t:40.3,cap:'Reality runs on four forces',sub:'— and Pralaya makes each one visible',act:()=>fOn('btn-grav')},
+ {t:42.8,cap:'🕸 Gravity',sub:'spacetime itself curves around every star'},
+ {t:45.3,cap:'🧲 Electromagnetism',sub:'the Sun’s solar wind streams past the planets’ magnetospheres',act:()=>fOn('btn-em')},
+ {t:48.3,cap:'Eight worlds, one star',sub:'each rendered from its real radius & temperature',act:()=>{fOff('btn-grav');fOff('btn-em');unfocus();}},
+ {t:50.3,cap:'Jupiter',sub:'a banded gas giant — a live Deep-Fold shader',act:()=>{const p=planets.find(x=>x.name==='Jupiter');if(p)focusOn(p);}},
+ {t:52.3,cap:'Saturn',sub:'real dithered rings, rendered in WebGL',act:()=>{const p=planets.find(x=>x.name==='Saturn');if(p)focusOn(p);}},
+ {t:54.3,cap:'Sol',sub:'our star — fusing hydrogen for 4.6 billion years',act:()=>focusOn(SUN)},
+ {t:56.3,cap:'Earth',sub:'the only world known to harbour life',act:()=>{const e=planets.find(x=>x.name==='Earth');if(e)focusOn(e);}},
+ {t:57.8,cap:'Every world is an AI agent',sub:'goals · trust · memory — perceive, decide, act'},
+ {t:60.0,cap:'🔌 Connect live Claude',sub:'paste your own Anthropic API key…',act:()=>openClaudeModal()},
+ {t:62.5,cap:'…and every decision is made by the model',sub:'your key stays in your browser only · CSP-locked to Anthropic · budget-capped',act:()=>closeClaudeModal()},
+ {t:65.0,cap:'The Council',sub:'minds · trust matrix · diplomacy web · balance of power',act:dOpen},
+ {t:69.0,cap:'Back to the stars',sub:'',act:()=>{dClose();enterGalaxy();gScale=1.0;tourCam(1.0);}},
+ {t:70.5,cap:'Oh, and one more thing…',sub:'why is there an “end the universe” button?'},
+ {t:73.0,cap:'…honestly? just for the fun of it 😄',sub:'every creator deserves a big red button — so watch what it does'},
+ {t:75.5,cap:'☠ Terminate the universe',sub:'3… 2… 1… and all hell breaks loose',act:()=>startTermination('mix')},
+ {t:84.5,cap:'…and the galaxy reforms',sub:'the cycle begins again',act:()=>{if(TERM)startReform();}},
+ {t:88.0,cap:'PRALAYA',sub:'a single self-contained HTML file · created by Saagar Shekara Devadiga'},
+ {t:92.0,end:true,finale:true}
 ];
 function startTour(){if(TOUR){stopTour();return;}
   enterGalaxy();if(dashOpen)document.getElementById('btn-dash').click();GWARS.length=0;unfocus();
   if(realMode)setMode(false); // always start the tour in the living galaxy
-  TOUR={start:null,i:0,cam:null};document.getElementById('btn-tour').classList.add('on');}
-function stopTour(){TOUR=null;showTourCap('');document.getElementById('btn-tour').classList.remove('on');}
+  TOUR={start:null,i:0,cam:null};document.getElementById('btn-tour').classList.add('on');document.getElementById('app').classList.add('touring');}
+function stopTour(){TOUR=null;showTourCap('');document.getElementById('btn-tour').classList.remove('on');document.getElementById('app').classList.remove('touring');}
 function showIntro(){const el=document.getElementById('intro');el.style.display='';void el.offsetWidth;el.classList.remove('gone');} // bring the entry screen back — full cycle
+function exitTour(){ // stop the tour and return to a clean, interactive galaxy
+  if(TERM){TERM=null;termScatter=0;STARS.forEach(s=>{s._rdx=0;s._rdy=0;});EXOHOSTS.forEach(e=>{e._rdx=0;e._rdy=0;}); // undo any in-progress termination
+    document.getElementById('term').style.display='none';document.getElementById('termmsg').style.display='none';document.getElementById('btn-reset').classList.remove('blink');
+    document.getElementById('btn-end').classList.remove('on');document.getElementById('app').classList.remove('terminating');document.getElementById('stage').classList.remove('glitching');timeScale=timeScale0||1;}
+  closeClaudeModal();if(dashOpen)document.getElementById('btn-dash').click();if(realMode)setMode(false);
+  if(vision!==0){vision=0;const b=document.getElementById('btn-vision');b.textContent='👁 optical';b.classList.remove('on');}
+  ['btn-grav','btn-em'].forEach(id=>{const b=document.getElementById(id);if(b.classList.contains('on'))b.click();});
+  const intro=document.getElementById('intro');intro.classList.add('gone');intro.style.display='none'; // stay in the sim, not the entry screen
+  stopTour();}
 function tourCam(s,x,y){if(TOUR)TOUR.cam={s,x:x==null?null:x,y:y==null?null:y};}
 function tourTick(now){if(TOUR.start===null)TOUR.start=now;const el=(now-TOUR.start)/1000;
   while(TOUR.i<TOUR_SCRIPT.length&&TOUR_SCRIPT[TOUR.i].t<=el){const b=TOUR_SCRIPT[TOUR.i++];
@@ -2490,6 +2509,7 @@ document.getElementById('btn-claude').onclick=openClaudeModal;
 document.getElementById('cm-x').onclick=closeClaudeModal;
 document.getElementById('claudemodal').onclick=e=>{if(e.target.id==='claudemodal')closeClaudeModal();};
 document.getElementById('btn-tour').onclick=startTour;
+document.getElementById('btn-exit').onclick=exitTour;
 document.getElementById('intro-enter').onclick=()=>{const el=document.getElementById('intro');el.classList.add('gone');setTimeout(()=>el.style.display='none',850);};
 document.getElementById('intro-tour').onclick=()=>{const el=document.getElementById('intro');el.classList.add('gone');setTimeout(()=>{el.style.display='none';startTour();},850);};
 document.getElementById('btn-war').onclick=inciteWar;
